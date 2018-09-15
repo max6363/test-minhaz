@@ -12,9 +12,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        // Delivery Controller
+        let deliver_vc = ItemsToDeliverVC.init()
+        deliver_vc.view.backgroundColor = UIColor.white
+//        deliver_vc.view.setBorderWithColor(.red, borderWidth:2)
+        deliver_vc.automaticallyAdjustsScrollViewInsets = true
+        
+        // Initiate Navigation Controller
+        let nav = UINavigationController.init(rootViewController: deliver_vc)
+//        nav.view.setBorderWithColor(.blue, borderWidth: 3)
+        
+        // Initiate window
+        self.window = UIWindow.init(frame: UIScreen.main.bounds)
+        
+        // assign
+        self.window?.rootViewController = nav
+        
+        self.window?.makeKeyAndVisible()
+        
         return true
     }
 
