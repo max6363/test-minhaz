@@ -24,8 +24,10 @@ class DeliveryItemCell: UITableViewCell {
         let imageWidth = CELL_HEIGHT - CELL_CONTENT_MARGIN * 2.0
         let frame = CGRect(x: CELL_CONTENT_MARGIN, y: CELL_CONTENT_MARGIN, width: imageWidth, height: imageWidth)
         myImageView = UIImageView(frame: frame)
+        myImageView?.contentMode = .scaleAspectFill
+        myImageView?.clipsToBounds = true
         self.contentView.addSubview(myImageView!)
-        myImageView?.setBorderWithColor(.red, borderWidth: 2)
+//        myImageView?.setBorderWithColor(.red, borderWidth: 2)
         
         let gap = 10.0 as CGFloat
         let topMarginForLabel = 20 as CGFloat
@@ -35,7 +37,7 @@ class DeliveryItemCell: UITableViewCell {
         let labelFrame = CGRect(x: labelX, y: topMarginForLabel, width: labelWidth, height: labelHeight)
         myLabel = UILabel(frame: labelFrame)
         self.contentView.addSubview(myLabel!)
-        myLabel?.setBorderWithColor(.green, borderWidth: 2)
+        myLabel?.setBorderWithColor(.green, borderWidth: 1)
     }
 }
 

@@ -20,15 +20,4 @@ extension UIView {
         self.layer.borderWidth = borderWidth
     }
     
-    func setAllMasks() {
-        self.autoresizingMask =
-            [
-                .flexibleTopMargin,
-                .flexibleLeftMargin,
-                .flexibleRightMargin,
-                .flexibleBottomMargin,
-//                .flexibleWidth,
-//                .flexibleHeight
-        ]
-    }
 }
