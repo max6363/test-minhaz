@@ -20,4 +20,18 @@ extension UIView {
         self.layer.borderWidth = borderWidth
     }
     
+    func setBorderWithColor(_ color: UIColor, borderWidth: CGFloat, cornderRadius: CGFloat) {
+        self.layer.borderColor = color.cgColor
+        self.layer.borderWidth = borderWidth
+        self.layer.cornerRadius = cornderRadius
+    }
+}
+
+extension UIRefreshControl {
+    
+    func setText(text: String) {
+        let attributes = [NSAttributedStringKey.foregroundColor: UIColor.black]
+        let attr_string = NSAttributedString(string: text, attributes: attributes)
+        self.attributedTitle = attr_string
+    }
 }
