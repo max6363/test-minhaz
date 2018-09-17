@@ -48,6 +48,31 @@ class DeliveryItemCell: UITableViewCell {
         myLoading?.hidesWhenStopped = true
         myLoading?.stopAnimating()
     }
+    
+    func setDeliveryDataWithObject(object: Dictionary<String, Any>, indexPath: IndexPath)
+    {
+        // set description
+        let description = object["description"] as? String
+        self.myLabel?.text = "\(indexPath.row + 1): \(description ?? "")"
+        
+        let urlString = object["imageUrl"] as? String
+        let url = URL(string: urlString!)
+        
+        // cancel previous image loading
+        self.myImageView?.af_cancelImageRequest()
+        // set image nil
+        self.myImageView?.image = nil
+        // start animating (before image begin downloading)
+        self.myLoading?.startAnimating()
+        // set image from url (now download starts)
+        self.myImageView?.af_setImage(withURL: url!, placeholderImage: nil, filter:  nil, progress: { (Progress) in
+            
+        }, progressQueue: DispatchQueue.main, imageTransition: UIImageView.ImageTransition.crossDissolve(0.2), runImageTransitionIfCached: true, completion: { (image) in
+            
+            // stop loading indicator
+            self.myLoading?.stopAnimating()
+        })
+    }
 }
 
 class NoDeliveryItemCell: UITableViewCell {

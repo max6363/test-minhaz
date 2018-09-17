@@ -25,6 +25,10 @@ extension UIView {
         self.layer.borderWidth = borderWidth
         self.layer.cornerRadius = cornderRadius
     }
+    
+    func copyView<T: UIView>() -> T {
+        return NSKeyedUnarchiver.unarchiveObject(with: NSKeyedArchiver.archivedData(withRootObject: self)) as! T
+    }
 }
 
 extension UIRefreshControl {

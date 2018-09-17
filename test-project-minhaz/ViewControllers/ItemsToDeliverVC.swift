@@ -17,7 +17,7 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
     var refreshControl : UIRefreshControl? = nil
     
     var offset = 1
-    var limit = 10
+    var limit = DEFAULT_LIMIT
     
     // Loading
     var loading : MBProgressHUD? = nil
@@ -56,6 +56,26 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
+}
+
+// MARK:- Action Events
+extension ItemsToDeliverVC {
+    
+    @objc func onRefreshControlAction() {
+        
+        // reet request params
+        resetRequestParams()
+        
+        // set refreshing status
+        refreshControl?.setText(text: "Refreshing...")
+        
+        // fetch items without loading view
+        self.fetchAllItems(showLoading: false, offset_value: offset, limit_value: limit, isLoadMore: false)
+    }
+}
+
+// MARK:- Setup
+extension ItemsToDeliverVC {
     
     func addTableView()
     {
@@ -70,10 +90,10 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
                 .flexibleBottomMargin,
                 .flexibleWidth,
                 .flexibleHeight
-            ]
+        ]
         self.view.addSubview(theTableView!)
         theTableView!.setBorderWithColor(.blue, borderWidth: 3)
-     
+        
         // set table delegate
         theTableView?.dataSource = self
         theTableView?.delegate = self
@@ -89,11 +109,83 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
         refreshControl?.addTarget(self, action: #selector(onRefreshControlAction), for: .valueChanged)
         theTableView?.addSubview(refreshControl!)
     }
-    
-    func reloadTableView()
-    {
-        theTableView?.reloadData()
+}
+
+
+//MARK: - UITableViewDataSource
+
+extension ItemsToDeliverVC {
+
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 1
     }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        
+        // For No-Item State
+        if items.count == 0 {
+            return heightForNoDeliveryItemForTableView(tableView: tableView)
+        }
+        // Item cell height
+        return CELL_HEIGHT
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        
+        // For No-Item State
+        if items.count == 0 {
+            return 1
+        }
+        // Do not allow if error comes
+        if shouldAllowLoadMore == false {
+            return items.count
+        }
+        // Adding 1 for loading cell at the end of list
+        return items.count + 1
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+        // check item count
+        // show table state based on items availability
+        
+        if items.count == 0 {
+            
+            // "No-Delivery" cell when no items available
+            let cell = noDeliveryItemCellForTable(tableView: tableView)
+            return cell
+            
+        } else {
+            
+            if items.count > 0 && indexPath.row == items.count {
+                
+                // loading cell
+                let cell = loadingCellForTableView(tableView: tableView)
+                cell.loadingIndicator?.startAnimating()
+                return cell
+                
+            } else {
+                
+                let cellIdentifier = "cell"
+                
+                // reuse cell (if available)
+                var cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier) as? DeliveryItemCell
+                if cell == nil {
+                    cell = deliveryItemCellWithIdentifier(identifier: cellIdentifier) as DeliveryItemCell
+                }
+                
+                // delivery object
+                let object = self.items[indexPath.row]
+                cell?.setDeliveryDataWithObject(object: object, indexPath: indexPath)
+                
+                return cell!
+            }
+        }
+    }
+}
+
+// MARK:- API Calling & Response Handling
+extension ItemsToDeliverVC {
     
     func startLoading()
     {
@@ -126,24 +218,10 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
     func resetRequestParams()
     {
         offset = 1
-        limit = 10
+        limit = DEFAULT_LIMIT
         shouldAllowLoadMore = true
         hasDataRequested = false
     }
-    
-    // MARK:- Refresh Control
-    @objc func onRefreshControlAction() {
-        
-        // reet request params
-        resetRequestParams()
-        
-        // set refreshing status
-        refreshControl?.setText(text: "Refreshing...")
-        
-        // fetch items without loading view
-        self.fetchAllItems(showLoading: false, offset_value: offset, limit_value: limit, isLoadMore: false)
-    }
-
     
     func nextOffset() {
         offset = offset + limit
@@ -151,7 +229,7 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
     
     // MARK:- Fetch Data
     func fetchAllItems(showLoading: Bool, offset_value: Int, limit_value: Int, isLoadMore: Bool) {
-     
+        
         // increase number
         API_sequence_number += 1
         
@@ -159,37 +237,6 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
             // start loading
             self.startLoading()
         }
-        /*
-        let myURLString = getURLForAllDeliveries(offset: offset, limit: limit)
-        let url = URL(string: myURLString)!
-        let urlRequest = URLRequest(url: url)
-        Alamofire.request(urlRequest)
-            .responseJSON { response in
-                
-                // hide refresh control
-                if showLoading == false {
-                    self.refreshControl?.endRefreshing()
-                }
-                
-                // remove all objects
-                self.items.removeAll()
-                
-                if ((response.error) != nil) {
-                    print("error: \(response.error?.localizedDescription ?? "")")
-                    let message = response.error?.localizedDescription
-                    self.stopLoadingWithErrorMessage(message: message!)
-                }
-                else {
-                    // stop loading
-                    self.stopLoading()
-                    // response
-                    self.items = response.value as! [Dictionary<String, Any>]
-                    print("array: ",self.items)
-                }
-                
-                // reload table
-                self.reloadTableView()
-        }*/
         
         let api_obj = APIData()
         api_obj.delegate = self
@@ -231,7 +278,7 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
                 if api_object.isLoadMore == false {
                     // response
                     self.items = response.value as! [Dictionary<String, Any>]
-
+                    
                 } else {
                     // append items if load-more
                     for item in response.value as! [Dictionary<String, Any>] {
@@ -245,77 +292,14 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
         }
     }
     
-    // MARK:- UITableViewDataSource
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return 1
+    func reloadTableView()
+    {
+        theTableView?.reloadData()
     }
-    
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        if items.count == 0 {
-            return heightForNoDeliveryItemForTableView(tableView: tableView)
-        }
-        return CELL_HEIGHT
-    }
-    
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if items.count == 0 {
-            return 1
-        }
-        if shouldAllowLoadMore == false {
-            return items.count
-        }
-        return items.count + 1 // Adding 1 for loading cell at the end of list
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
-        if items.count == 0 {
-            
-            let cell = noDeliveryItemCellForTable(tableView: tableView)
-            return cell
-            
-        } else {
-            
-            if items.count > 0 && indexPath.row == items.count {
-                
-                let cell = loadingCellForTableView(tableView: tableView)
-                cell.loadingIndicator?.startAnimating()
-                return cell
-                
-            } else {
-                
-                let cellIdentifier = "cell"
-                var cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier) as? DeliveryItemCell
-                if cell == nil {
-                    cell = deliveryItemCellWithIdentifier(identifier: cellIdentifier) as DeliveryItemCell
-                }
-                
-                let object = self.items[indexPath.row]
-                
-                let description = object["description"] as? String
-                cell?.myLabel?.text = "\(indexPath.row + 1): \(description ?? "")"
-                
-                let urlString = object["imageUrl"] as? String
-                let url = URL(string: urlString!)
-                
-                cell?.myImageView?.af_cancelImageRequest()
-                cell?.myImageView?.image = nil
-                cell?.myLoading?.startAnimating()
-                cell?.myImageView?.af_setImage(withURL: url!, placeholderImage: nil, filter:  nil, progress: { (Progress) in
-                    
-                }, progressQueue: DispatchQueue.main, imageTransition: UIImageView.ImageTransition.crossDissolve(0.2), runImageTransitionIfCached: true, completion: { (image) in                    
-                    cell?.myLoading?.stopAnimating()
-                })
-                return cell!
-            }
-        }
-    }
-    
-    
-    // MARK:- UITableViewDelegate
-    
-    
 }
+
+
+// MARK:- UIScrollViewDelegate
 
 extension ItemsToDeliverVC {
     
@@ -350,6 +334,22 @@ extension ItemsToDeliverVC {
                 self.nextOffset()
                 self.fetchAllItems(showLoading: false, offset_value: offset, limit_value: limit, isLoadMore: true)
             }
+        }
+    }
+}
+
+// MARK:- UITableViewDelegate
+extension ItemsToDeliverVC {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        if items.count > 0 && indexPath.row < items.count {
+            
+            let object = self.items[indexPath.row]
+            let vc = DeliveryDetailsVC()
+            vc.automaticallyAdjustsScrollViewInsets = true
+            vc.deliveryObject = object
+            vc.myIndexPath = indexPath
+            self.navigationController?.pushViewController(vc, animated: true)
         }
     }
 }
