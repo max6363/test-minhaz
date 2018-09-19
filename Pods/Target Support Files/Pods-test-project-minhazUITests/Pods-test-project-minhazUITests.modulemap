@@ -1,0 +1,6 @@
+framework module Pods_test_project_minhazUITests {
+  umbrella header "Pods-test-project-minhazUITests-umbrella.h"
+
+  export *
+  module * { export * }
+}
