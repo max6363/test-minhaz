@@ -12,9 +12,11 @@ import MBProgressHUD
 
 class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDelegate, APIDataDelegate, UIScrollViewDelegate {
 
+    let offline_data_key = "offline_data" as String
     var items : [Dictionary<String, Any>] = []
     var theTableView : UITableView? = nil
     var refreshControl : UIRefreshControl? = nil
+    var offineRecordCountBtn : UIBarButtonItem? = nil
     
     var offset = 1
     var limit = DEFAULT_LIMIT
@@ -39,6 +41,12 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
         // set title
         self.title = "All Deliveries"
         
+        let clearBarButton = UIBarButtonItem(title: "Clear Offline Data", style: .done, target: self, action: #selector(onClearOfflineData(sender:)))
+        self.navigationItem.rightBarButtonItem = clearBarButton
+        
+        self.offineRecordCountBtn = UIBarButtonItem(title: "0 records", style: .done, target: self, action: #selector(onOfflineCountData(sender:)))
+        self.navigationItem.leftBarButtonItem = self.offineRecordCountBtn
+        
         // Tableview
         self.addTableView()
         
@@ -47,6 +55,17 @@ class ItemsToDeliverVC: UIViewController, UITableViewDataSource, UITableViewDele
         
         // reset request parameters
         self.resetRequestParams()
+        
+        let offline_data = self.getOffineData()
+        if offline_data != nil {
+            for item in offline_data! {
+                self.items.append(item)
+            }
+            self.setOfflineCount(count: (offline_data?.count)!)
+        }
+        
+        
+        self.reloadTableView()
         
         // request data
         self.fetchAllItems(showLoading: true, offset_value: offset, limit_value: limit, isLoadMore: false)
@@ -64,13 +83,38 @@ extension ItemsToDeliverVC {
     @objc func onRefreshControlAction() {
         
         // reet request params
-        resetRequestParams()
+        self.resetRequestParams()
         
         // set refreshing status
         refreshControl?.setText(text: "Refreshing...")
         
         // fetch items without loading view
         self.fetchAllItems(showLoading: false, offset_value: offset, limit_value: limit, isLoadMore: false)
+    }
+    
+    @IBAction func onClearOfflineData(sender: UIBarButtonItem) {
+        
+        // clear offline data
+        self.removeOfflineData()
+        
+        // remove data from array
+        self.items.removeAll()
+        
+        self.theTableView?.contentOffset = .zero
+        self.reloadTableView()
+        
+        self.resetRequestParams()
+        // set refreshing status
+        refreshControl?.setText(text: "Refreshing...")
+        
+        self.setOfflineCount(count: 0)
+        
+        // fetch items without loading view
+        self.fetchAllItems(showLoading: false, offset_value: offset, limit_value: limit, isLoadMore: false)
+    }
+    
+    @IBAction func onOfflineCountData(sender: UIBarButtonItem) {
+        
     }
 }
 
@@ -92,7 +136,7 @@ extension ItemsToDeliverVC {
                 .flexibleHeight
         ]
         self.view.addSubview(theTableView!)
-        theTableView!.setBorderWithColor(.blue, borderWidth: 3)
+//        theTableView!.setBorderWithColor(.blue, borderWidth: 3)
         
         // set table delegate
         theTableView?.dataSource = self
@@ -259,11 +303,6 @@ extension ItemsToDeliverVC {
                 self.refreshControl?.endRefreshing()
             }
             
-            if api_object.isLoadMore == false {
-                // remove all objects
-                self.items.removeAll()
-            }
-            
             if ((response.error) != nil) {
                 print("error: \(response.error?.localizedDescription ?? "")")
                 let message = response.error?.localizedDescription
@@ -275,7 +314,7 @@ extension ItemsToDeliverVC {
                 self.stopLoading()
                 
                 // assign item if refreshing
-                if api_object.isLoadMore == false {
+                if api_object.isLoadMore == false && self.items.count == 0 {
                     // response
                     self.items = response.value as! [Dictionary<String, Any>]
                     
@@ -285,6 +324,9 @@ extension ItemsToDeliverVC {
                         self.items.append(item)
                     }
                 }
+                
+                // save data for offline access
+                self.saveDataOffline(dataArray: response.value as! [Dictionary<String, Any>])
             }
             
             // reload table
@@ -353,3 +395,57 @@ extension ItemsToDeliverVC {
         }
     }
 }
+
+// MARK:- Offline mode capabilities
+extension ItemsToDeliverVC {
+    
+    func saveDataOffline(dataArray: [Dictionary<String, Any>]) {
+        
+        let old_data = self.getOffineData()
+        if old_data == nil {
+            // save
+            let def = UserDefaults.standard
+            def.setValue(dataArray, forKey: offline_data_key)
+            def.synchronize()
+            
+            self.setOfflineCount(count: dataArray.count)
+            
+        } else {
+            // merge & save
+            var new_data_after_merged = [Dictionary<String, Any>]()
+            for item in old_data! {
+                new_data_after_merged.append(item)
+            }
+            for item in dataArray {
+                new_data_after_merged.append(item)
+            }
+            // save
+            let def = UserDefaults.standard
+            def.setValue(new_data_after_merged, forKey: offline_data_key)
+            def.synchronize()
+            
+            self.setOfflineCount(count: new_data_after_merged.count)
+        }
+    }
+    
+    func getOffineData() -> [Dictionary<String, Any>]? {
+        let def = UserDefaults.standard
+        if (def.object(forKey: offline_data_key) != nil) {
+            let data = def.object(forKey: offline_data_key) as! [Dictionary<String, Any>]
+            return data
+        }
+        return nil
+    }
+    
+    func removeOfflineData() {
+        let def = UserDefaults.standard
+        def.removeObject(forKey: offline_data_key)
+        def.synchronize()
+    }
+    
+    func setOfflineCount(count: Int)
+    {
+        offineRecordCountBtn?.title = "\(count) records"
+    }
+}
+
