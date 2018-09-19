@@ -13,8 +13,10 @@ class DeliveryDetailsVC: UIViewController, MKMapViewDelegate {
     var deliveryObject: Dictionary<String, Any>? = nil
     var descriptionView: UIView? = nil
     var myIndexPath : IndexPath? = nil
+    
     private var myImageView : UIImageView? = nil
     private var myLabel : UILabel? = nil
+    private var myLabelSubtitle : UILabel? = nil
     private var myLoading : UIActivityIndicatorView? = nil
     
     private var myMapView: MKMapView? = nil
@@ -35,10 +37,12 @@ class DeliveryDetailsVC: UIViewController, MKMapViewDelegate {
         let f = CGRect(x: 0, y: y, width: CELL_WIDTH, height: CELL_HEIGHT)
         descriptionView = UIView(frame: f)
         self.view.addSubview(descriptionView!)
-        descriptionView?.setBorderWithColor(.green, borderWidth: 2)
+        descriptionView?.setBorderWithColor(.gray, borderWidth: 1)
         
         self.detailSetup()
         self.setDeliveryDataWithObject(object: self.deliveryObject!, indexPath: self.myIndexPath!)
+        
+        self.updateMap()
     }
 
     override func didReceiveMemoryWarning() {
@@ -57,7 +61,7 @@ extension DeliveryDetailsVC {
         let f = CGRect(x: 0, y: y! + 20, width: width, height: width)
         myMapView = MKMapView(frame: f)
         self.view.addSubview(myMapView!)
-        myMapView?.setBorderWithColor(.red, borderWidth: 2)
+//        myMapView?.setBorderWithColor(.red, borderWidth: 2)
     }
      func detailSetup()
      {
@@ -71,16 +75,29 @@ extension DeliveryDetailsVC {
         myImageView?.setBorderWithColor(.lightGray, borderWidth: 1, cornderRadius: 10.0)
         
         let gap = 10.0 as CGFloat
-        let topMarginForLabel = 15 as CGFloat
+        
+        var topMarginForLabel = 20 as CGFloat
         let labelX = (myImageView?.frame.origin.x)! + (myImageView?.frame.size.width)! + gap
         let labelWidth = CELL_WIDTH - labelX - CELL_CONTENT_MARGIN
-        let labelHeight = CELL_HEIGHT - topMarginForLabel * 2.0
-        let labelFrame = CGRect(x: labelX, y: topMarginForLabel, width: labelWidth, height: labelHeight)
+        let labelHeight = 25 as CGFloat
+        
+        var labelFrame = CGRect(x: labelX, y: topMarginForLabel, width: labelWidth, height: labelHeight)
         myLabel = UILabel(frame: labelFrame)
+        myLabel?.font = UIFont(name: "HelveticaNeue", size: 20)
         myLabel?.numberOfLines = 0
         myLabel?.lineBreakMode = .byWordWrapping
         self.descriptionView?.addSubview(myLabel!)
-        //        myLabel?.setBorderWithColor(.green, borderWidth: 1)
+        
+        let gap_between_labels = 5 as CGFloat
+        let detailLabelHeight = 25 as CGFloat
+        
+        topMarginForLabel = topMarginForLabel + labelHeight + gap_between_labels
+        labelFrame = CGRect(x: labelX, y: topMarginForLabel, width: labelWidth, height: detailLabelHeight)
+        myLabelSubtitle = UILabel(frame: labelFrame)
+        myLabelSubtitle?.font = UIFont(name: "HelveticaNeue-Light", size: 16)
+        myLabelSubtitle?.numberOfLines = 0
+        myLabelSubtitle?.lineBreakMode = .byWordWrapping
+        self.descriptionView?.addSubview(myLabelSubtitle!)
         
         myLoading = UIActivityIndicatorView(activityIndicatorStyle: .gray)
         myLoading?.center = CGPoint(x: imageWidth/2.0, y: imageWidth/2.0)
@@ -93,7 +110,8 @@ extension DeliveryDetailsVC {
     {
         // set description
         let description = object["description"] as? String
-        self.myLabel?.text = "\(indexPath.row + 1): \(description ?? "")"
+        //        self.myLabel?.text = "\(indexPath.row + 1): \(description ?? "")"
+        self.myLabel?.text = description
         
         let urlString = object["imageUrl"] as? String
         let url = URL(string: urlString!)
@@ -112,11 +130,31 @@ extension DeliveryDetailsVC {
             // stop loading indicator
             self.myLoading?.stopAnimating()
         })
+        
+        let location = object["location"] as! Dictionary<String, Any>
+        let address = location["address"] as! String
+        self.myLabelSubtitle?.text = address
     }
 }
 
 //MARK:- MKMapViewDelegate
 extension DeliveryDetailsVC {
     
-    
+    func updateMap()
+    {
+        let location_obj = self.deliveryObject!["location"] as! Dictionary<String, Any>
+        let address = location_obj["address"] as! String
+        let lattitude = location_obj["lat"] as! NSNumber
+        let longitude = location_obj["lng"] as! NSNumber
+        let coord = CLLocationCoordinate2D(latitude: CLLocationDegrees(lattitude.doubleValue), longitude: CLLocationDegrees(longitude.doubleValue))
+        
+        let center = coord
+        let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+        myMapView?.setRegion(region, animated: true)
+        
+        let myAnnotation: MKPointAnnotation = MKPointAnnotation()
+        myAnnotation.coordinate = coord
+        myAnnotation.title = address
+        myMapView?.addAnnotation(myAnnotation)
+    }
 }

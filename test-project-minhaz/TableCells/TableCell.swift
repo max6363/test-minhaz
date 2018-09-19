@@ -12,6 +12,7 @@ class DeliveryItemCell: UITableViewCell {
     
     var myImageView : UIImageView? = nil
     var myLabel : UILabel? = nil
+    var myLabelSubtitle : UILabel? = nil
     var myLoading : UIActivityIndicatorView? = nil
     
     required init?(coder aDecoder: NSCoder) {
@@ -31,16 +32,31 @@ class DeliveryItemCell: UITableViewCell {
         myImageView?.setBorderWithColor(.lightGray, borderWidth: 1, cornderRadius: 10.0)
         
         let gap = 10.0 as CGFloat
-        let topMarginForLabel = 15 as CGFloat
+        
+        var topMarginForLabel = 20 as CGFloat
         let labelX = (myImageView?.frame.origin.x)! + (myImageView?.frame.size.width)! + gap
         let labelWidth = CELL_WIDTH - labelX - CELL_CONTENT_MARGIN
-        let labelHeight = CELL_HEIGHT - topMarginForLabel * 2.0
-        let labelFrame = CGRect(x: labelX, y: topMarginForLabel, width: labelWidth, height: labelHeight)
+        let labelHeight = 25 as CGFloat
+        
+        var labelFrame = CGRect(x: labelX, y: topMarginForLabel, width: labelWidth, height: labelHeight)
         myLabel = UILabel(frame: labelFrame)
+        myLabel?.font = UIFont(name: "HelveticaNeue", size: 20)
         myLabel?.numberOfLines = 0
         myLabel?.lineBreakMode = .byWordWrapping
         self.contentView.addSubview(myLabel!)
 //        myLabel?.setBorderWithColor(.green, borderWidth: 1)
+        
+        let gap_between_labels = 5 as CGFloat
+        let detailLabelHeight = 25 as CGFloat
+        
+        topMarginForLabel = topMarginForLabel + labelHeight + gap_between_labels
+        labelFrame = CGRect(x: labelX, y: topMarginForLabel, width: labelWidth, height: detailLabelHeight)
+        myLabelSubtitle = UILabel(frame: labelFrame)
+        myLabelSubtitle?.font = UIFont(name: "HelveticaNeue-Light", size: 16)
+        myLabelSubtitle?.numberOfLines = 0
+        myLabelSubtitle?.lineBreakMode = .byWordWrapping
+        self.contentView.addSubview(myLabelSubtitle!)
+//        myLabelSubtitle?.setBorderWithColor(.blue, borderWidth: 1)
         
         myLoading = UIActivityIndicatorView(activityIndicatorStyle: .gray)
         myLoading?.center = CGPoint(x: imageWidth/2.0, y: imageWidth/2.0)
@@ -53,7 +69,8 @@ class DeliveryItemCell: UITableViewCell {
     {
         // set description
         let description = object["description"] as? String
-        self.myLabel?.text = "\(indexPath.row + 1): \(description ?? "")"
+//        self.myLabel?.text = "\(indexPath.row + 1): \(description ?? "")"
+        self.myLabel?.text = description
         
         let urlString = object["imageUrl"] as? String
         let url = URL(string: urlString!)
@@ -72,6 +89,10 @@ class DeliveryItemCell: UITableViewCell {
             // stop loading indicator
             self.myLoading?.stopAnimating()
         })
+        
+        let location = object["location"] as! Dictionary<String, Any>
+        let address = location["address"] as! String
+        self.myLabelSubtitle?.text = address
     }
 }
 
